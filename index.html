@@ -190,6 +190,14 @@
 
   <script>
   /* ================== EKRAN / MOBİL TAM YÜKSEKLİK ================== */
+
+  /* ===== SIZE KNOB (tek ayar yeri) =====
+   0.5 = çok küçük, 1.0 = normal, 1.5 = büyük  */
+const DUCK_SIZE_K = 0.85;
+
+/* Mobil/desktop tespiti (ekran dar ise mobil gibi davran) */
+const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 520;
+
   function setAppHeight(){
     const vh = (window.visualViewport?.height ?? window.innerHeight);
     document.documentElement.style.setProperty('--app-h', vh + 'px');
@@ -335,36 +343,41 @@
   function spawnWave(){
   ducks.length = 0;
 
-  // Ekran genişliğine göre hedef kolon sayısı (mobilde daha az kolon)
-  const targetCols = (W < 400) ? 4 : (W < 700 ? 6 : 8);
+  // Ekran genişliğine göre mantıklı kolon sayısı
+  const targetCols = isMobile
+    ? (W < 360 ? 4 : 5)      // mobilde 4-5 kolon
+    : (W < 900 ? 7 : 8);     // desktopta 7-8 kolon
 
-  // Aralıklar ekran boyuna göre
+  // Aralıklar
   const gapX = Math.max(8, Math.floor(W * 0.02));
   const gapY = Math.max(10, Math.floor(H * 0.012));
 
-  // Satır sayısı zorlukla artsın ama sınırlı kalsın
+  // Satır sayısı (seviyeyle artsın ama sınırlı)
   const rows = Math.max(3, Math.min(6, 3 + Math.floor((level - 1) / 2)));
 
-  // Her ördeğin genişliğini, mevcut genişliğe ve kolon sayısına göre hesapla
+  // Taban genişlik: ekran genişliğine/kolon sayısına dayanır
   let dwBase = Math.floor((W - 40 - gapX * (targetCols - 1)) / targetCols);
-  // Çok küçük/büyük aşırılıkları kırp
-  dwBase = clamp(dwBase, 40, 90);
 
-  // Zorluk arttıkça az artan bir ölçek (maks %25)
-  const scale = 1 + Math.min(0.25, 0.02 * (level - 1));
-  const dw = Math.floor(dwBase * scale);
-  const dh = Math.floor(dw * 0.66); // en-boy oranı: hafif yatay ördek
+  // Mobilde üst sınırı daha düşük tutalım
+  const DW_MIN = isMobile ? 22 : 32;
+  const DW_MAX = isMobile ? 56 : 88;
+
+  // Seviye ile aşırı büyümesin diye ufak bir scale
+  const levelScale = 1 + Math.min(0.15, 0.015 * (level - 1));
+
+  // SON ördek boyutu: base * kullanıcı ayarı * seviye ölçeği
+  const dw = clamp(Math.round(dwBase * DUCK_SIZE_K * levelScale), DW_MIN, DW_MAX);
+  const dh = Math.round(dw * 0.66); // oran
 
   const totalW = targetCols * dw + (targetCols - 1) * gapX;
   const totalH = rows * dh + (rows - 1) * gapY;
 
-  // Üstten mesafe: mobilde de alanı aşmasın
-  const marginTop = Math.max(40, Math.min(120, Math.floor(H * 0.12)));
-  const approach = Math.floor((level - 1) * 6); // seviye ile yavaşça yaklaşsın
+  const marginTop = Math.max(36, Math.min(120, Math.floor(H * 0.12)));
+  const approach = Math.floor((level - 1) * 5);  // seviye ile yavaşça yaklaşsın
   const maxTop = zone.y - totalH - 80;
-  const top = clamp(marginTop + approach, 30, Math.max(30, maxTop));
+  const top = clamp(marginTop + approach, 26, Math.max(26, maxTop));
 
-  const startX = Math.max(20, Math.floor((W - totalW) / 2));
+  const startX = Math.max(16, Math.floor((W - totalW) / 2));
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < targetCols; c++) {
@@ -378,11 +391,12 @@
     }
   }
 
-  // Seviye ile hafif hız/ateş ayarı (aşırı olmasın)
-  duckSpeed = Math.min(140, Math.max(40, duckSpeed * (1 + 0.06)));
-  enemyShootEvery = Math.max(0.25, enemyShootEvery * 0.94);
-  enemyBulletBase = Math.min(760, enemyBulletBase + 18);
+  // Zorluk artışı (çok agresif değil)
+  duckSpeed = Math.min(140, Math.max(40, duckSpeed * (1 + 0.05)));
+  enemyShootEvery = Math.max(0.28, enemyShootEvery * 0.95);
+  enemyBulletBase = Math.min(760, enemyBulletBase + 14);
 }
+
 
 
   function levelUp(){
