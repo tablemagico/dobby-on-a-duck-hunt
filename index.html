@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>Duck Dodge — Sentient Edition</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover" />
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --lamu-blue:#2D6BFF; --lamu-pink:#FF66CC; --lamu-red:#FF3B59;
+      --ink:#0a0b0d; --panel:#11161b; --muted:#c9d3de;
+      --hud-left-pad:12px; /* JS dinamik güncelliyor (userBox genişliği) */
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;height:100%;background:#0b0e12;color:#e9eef6;font-family:Montserrat,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+
+    /* Arkaplan: Sentient/Dobby glow */
+    body{
+      background:
+        radial-gradient(1000px 700px at 18% 8%, rgba(45,107,255,.45), transparent 70%),
+        radial-gradient(900px 620px at 82% 12%, rgba(255,59,89,.36), transparent 70%),
+        radial-gradient(1100px 800px at 50% 92%, rgba(255,102,204,.35), transparent 70%),
+        linear-gradient(180deg, #0b0e12 0%, #0a0d11 100%);
+    }
+    body::before{
+      content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.22;
+      background-image:
+        radial-gradient(rgba(45,107,255,.18) 1px, transparent 1.2px),
+        radial-gradient(rgba(255,102,204,.16) 1px, transparent 1.2px);
+      background-size:28px 28px,34px 34px;background-position:0 0,14px 18px;
+    }
+
+    #game{display:block;width:100vw;height:100vh;touch-action:none;cursor:crosshair}
+
+    /* HUD */
+    .hud{position:fixed;left:0;right:0;top:0;padding:10px 12px 0 var(--hud-left-pad);display:flex;gap:10px;align-items:center;justify-content:space-between;pointer-events:none;z-index:5}
+    .hud-left,.hud-right{display:flex;gap:10px;align-items:center}
+    .chip{background:rgba(17,22,27,.78);border:1px solid #2a3550;border-radius:12px;padding:10px 14px;font-weight:800;box-shadow:0 6px 20px rgba(0,0,0,.25);pointer-events:auto}
+    .chip.big{font-size:20px;line-height:1}
+    .chip .muted{opacity:.85;font-weight:700}
+
+    /* Zorluk barı */
+    .diff{display:flex;flex-direction:column;gap:6px;min-width:260px}
+    .diff .row{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+    .diff .lvl{font-size:18px}
+    .diff .cd{font-size:14px;opacity:.85}
+    .bar{height:10px;background:#1a2436;border:1px solid #2a3550;border-radius:999px;overflow:hidden}
+    .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--lamu-blue),var(--lamu-pink))}
+
+    /* X profili kutusu (sol üst) */
+    #userBox{
+      position:fixed;left:12px;top:12px;z-index:6;display:none;
+      align-items:center;gap:10px;background:rgba(17,22,27,.85);backdrop-filter:blur(6px);
+      padding:8px 12px;border-radius:14px;box-shadow:0 10px 28px rgba(0,0,0,.35);
+      border:1px solid rgba(45,107,255,.45);font-size:15px;
+    }
+    #userBox img{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,102,204,.6)}
+    #userBox .hdl{font-weight:800}
+
+    /* Overlays (Start & GameOver) */
+    #overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.40);backdrop-filter:blur(5px);z-index:10}
+    .card{width:min(560px,92vw);background:#11161b;border:1px solid #222b3a;border-radius:16px;padding:18px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+    .card h1{margin:0 0 6px;font-size:24px;color:var(--lamu-blue)}
+    .card p{margin:6px 0;color:var(--muted)}
+    .row{margin-top:12px;display:flex;gap:8px}
+    .btn{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:800;color:#fff;background:linear-gradient(90deg,var(--lamu-blue),var(--lamu-pink));cursor:pointer}
+    .btn.secondary{background:#223049}
+    .muted{opacity:.8}
+    input[type=text]{width:100%;background:#0f1420;color:#fff;border:1px solid rgba(45,107,255,.45);padding:12px 14px;border-radius:12px;outline:none}
+
+    /* Game Over içi Leaderboard + Card */
+    #gameover{display:none}
+    #lb-box{margin-top:12px}
+    #leaderboard{
+      background: radial-gradient(70% 90% at 30% 20%, #13181c, #0a0b0d);
+      border: 2px solid var(--lamu-blue);
+      box-shadow: 0 0 16px rgba(45, 107, 255, .35), 0 0 24px rgba(255, 102, 204, .25) inset;
+      border-radius: 16px;padding: 12px;max-height: 44vh;overflow:auto
+    }
+    #lb-title{font-weight:800;color:var(--lamu-blue);display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    #lb-meta{font-size:.85rem;opacity:.85}
+    #lb-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+    .lb-item{display:flex;align-items:center;gap:.6rem;background:rgba(255,255,255,.04);padding:6px 8px;border-radius:10px;border:1px solid rgba(45,107,255,.18)}
+    .lb-rank{width:2.2rem;text-align:right;font-weight:800;color:var(--lamu-blue)}
+    .lb-avatar{width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid rgba(45,107,255,.6)}
+    .lb-handle{font-weight:700}
+    .lb-stats{margin-left:auto;opacity:.9;font-size:.95rem}
+    #lb-loading{text-align:center;padding:.5rem 0;opacity:.7;display:none}
+
+    .sharePreview{width:100%;background:#0f1420;border:1px dashed #2a3550;border-radius:12px;padding:8px;display:flex;align-items:center;justify-content:center;margin-top:10px}
+    .sharePreview img{width:100%;height:auto;max-height:240px;object-fit:contain;display:block}
+
+    @media (max-width: 640px){
+      .chip.big{font-size:18px}
+      .diff{min-width:200px}
+    }
+  </style>
+</head>
+<body>
+  <!-- X profili (sol üst) -->
+  <div id="userBox" title="X profile">
+    <img id="avatar" alt="pfp" src=""/>
+    <div class="hdl" id="handle">@guest</div>
+  </div>
+
+  <!-- HUD -->
+  <div class="hud">
+    <div class="hud-left">
+      <div class="chip big">Skor: <span id="score">0</span></div>
+      <div class="chip big">Can: <span id="lives">❤️❤️❤️</span></div>
+    </div>
+    <div class="hud-right">
+      <div class="chip diff">
+        <div class="row" style="margin:0">
+          <span class="lvl" id="lvlLabel">Seviye 1</span>
+          <span class="cd">Sonraki: <span id="lvlCd">15.0s</span></span>
+        </div>
+        <div class="bar"><div class="fill" id="lvlFill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <!-- START -->
+  <div id="overlay" role="dialog" aria-modal="true">
+    <div class="card" id="startCard">
+      <h1>🦆 Duck Dodge — Dobby</h1>
+      <p>← → ile <b>sağa/sola</b> hareket et. <b>Space</b> ile yukarı ateş et.</p>
+      <p class="muted">Oyuna girmek için X (Twitter) kullanıcı adını gir. Avatarın sol üstte ve leaderboard’da gözükecek.</p>
+      <div class="row"><input id="inputHandle" type="text" placeholder="ör. cryptoayax" autocomplete="off"/></div>
+      <div class="row">
+        <button id="startBtn" class="btn">Başla (Enter)</button>
+        <button id="guestBtn" class="btn secondary">X olmadan oyna</button>
+      </div>
+    </div>
+
+    <!-- GAME OVER + LEADERBOARD + SCORE CARD -->
+    <div class="card" id="gameover">
+      <h1>Oyun Bitti</h1>
+      <p id="finalTxt">Skor: 0</p>
+      <div class="row">
+        <button id="againBtn" class="btn" style="flex:1">Tekrar Oyna (Enter)</button>
+      </div>
+
+      <div class="sharePreview"><img id="shareImg" alt="score card"/></div>
+      <div class="row">
+        <a id="dlBtn" download="duckdodge-score.png"><button class="btn secondary" style="flex:1">Kartı İndir</button></a>
+        <button id="tweetBtn" class="btn" style="flex:1">Share to X</button>
+      </div>
+
+      <div id="lb-box">
+        <div id="leaderboard">
+          <div id="lb-title"><span>🏆 Leaderboard</span><span id="lb-meta"></span></div>
+          <ol id="lb-list"></ol>
+          <div id="lb-loading">Yükleniyor…</div>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:8px">Sıralama: Skor yüksek → eşitlikte süre kısa olan önde.</p>
+    </div>
+  </div>
+
+  <script>
+  /* ================= SETTINGS ================= */
+  const API_BASE   = ''; // same origin
+  const API_SUBMIT = '/api/duckdodge-submit';
+  const API_LEADER = '/api/duckdodge-leaderboard';
+
+  /* ---- Oyuncu görseli (assets içine koy) ---- */
+  const PLAYER_IMG_SRC = 'assets/player.png'; // <-- kendi görselin
+  const playerImg = new Image(); playerImg.src = PLAYER_IMG_SRC; playerImg.onload = ()=>{}; playerImg.onerror = ()=>{};
+
+  /* ================= STATE & GAME (Duck Dodge) ================= */
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  let DPR = Math.min(2, window.devicePixelRatio || 1);
+  let W=0,H=0;
+  function resize(){ W=innerWidth; H=innerHeight; DPR=Math.min(2,window.devicePixelRatio||1); canvas.width=W*DPR; canvas.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); layout(); syncHudPad(); }
+  addEventListener('resize', resize);
+
+  const zone = {x:0,y:0,w:0,h:0};
+  function layout(){
+    const pad = Math.max(16, Math.min(W,H)*0.02);
+    zone.x = pad;
+    zone.w = W - pad*2;
+    zone.h = Math.max(160, Math.min(260, H*0.27));
+    zone.y = H - pad - zone.h;
+  }
+  const keys = { left:false, right:false, shoot:false };
+  addEventListener('keydown', e=>{
+    if (e.code==='ArrowLeft')  keys.left = true;
+    if (e.code==='ArrowRight') keys.right = true;
+    if (e.code==='Space'){ e.preventDefault(); keys.shoot = true; }
+    if (e.code==='Enter'){ if(!running){ startGame(); } }
+  });
+  addEventListener('keyup', e=>{
+    if (e.code==='ArrowLeft')  keys.left = false;
+    if (e.code==='ArrowRight') keys.right = false;
+    if (e.code==='Space')      keys.shoot = false;
+  });
+
+  /* Mobil dokunmatik kontroller */
+  let touchDir = 0;
+  function onPointer(e){
+    const x = e.clientX, y = e.clientY;
+    if (e.type==='pointerdown' || e.type==='pointermove'){
+      if (y > H*0.65){ // alt kısım -> hareket
+        touchDir = (x < W*0.5) ? -1 : 1;
+        keys.left = touchDir<0; keys.right = touchDir>0;
+      } else { // üst kısım -> anlık ateş
+        keys.shoot = true; setTimeout(()=>keys.shoot=false, 60);
+      }
+    } else if (e.type==='pointerup' || e.type==='pointercancel'){
+      touchDir = 0; keys.left = keys.right = false;
+    }
+  }
+  addEventListener('pointerdown', onPointer, {passive:false});
+  addEventListener('pointermove', onPointer, {passive:false});
+  addEventListener('pointerup', onPointer, {passive:false});
+  addEventListener('pointercancel', onPointer, {passive:false});
+
+  let mute=false;
+  function beep(freq=600, ms=60, type='square'){
+    if (mute) return;
+    const ac = beep.ac || (beep.ac = new (window.AudioContext||window.webkitAudioContext)());
+    const o = ac.createOscillator(); const g = ac.createGain();
+    o.type=type; o.frequency.value=freq; o.connect(g); g.connect(ac.destination);
+    const t=ac.currentTime; g.gain.setValueAtTime(0.001,t); g.gain.linearRampToValueAtTime(0.12,t+0.01); g.gain.exponentialRampToValueAtTime(0.001,t+ms/1000);
+    o.start(t); o.stop(t+ms/1000+0.05);
+  }
+
+  const player = { w:68, h:56, x:0, y:0, speed:460, shootCd:0, shootEvery:0.16, lives:3, inv:0 };
+  const bullets = [];
+  const ducks = [];
+  let duckDir = 1;
+  let duckSpeed = 52;
+  let enemyShootTimer = 0;
+  let enemyShootEvery = 0.65;
+  let enemyBulletBase = 340;
+
+  let score = 0, running = false, last = 0;
+
+  const DIFF_PERIOD = 15;
+  let level = 1, levelTime = 0;
+
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const hit=(a,b)=> a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
+
+  function updateHud(){
+    document.getElementById('score').textContent = score;
+    const hearts = ['❤️','❤️','❤️'].map((h,i)=> i<player.lives ? h : '🤍').join('');
+    document.getElementById('lives').textContent = hearts;
+    document.getElementById('lvlLabel').textContent = `Seviye ${level}`;
+    const left = Math.max(0, DIFF_PERIOD - levelTime);
+    document.getElementById('lvlCd').textContent = `${left.toFixed(1)}s`;
+    const pct = Math.min(1, levelTime / DIFF_PERIOD) * 100;
+    document.getElementById('lvlFill').style.width = pct + '%';
+  }
+
+  function reset(){
+    score = 0; level = 1; levelTime = 0;
+    player.lives = 3; player.inv = 0;
+    bullets.length = ducks.length = 0;
+    duckDir = 1; duckSpeed = 52; enemyShootEvery = 0.65; enemyBulletBase = 340;
+    spawnWave();
+    player.x = zone.x + zone.w/2 - player.w/2;
+    player.y = zone.y + zone.h - player.h - 6;
+    startMs = Date.now(); // run süre ölçümü
+    updateHud();
+  }
+
+  function spawnWave(){
+    ducks.length = 0;
+    const dw = Math.min(110, 76 * (1 + 0.03*(level-1))); // ördekler büyüdü
+    const dh = Math.min(70, 48 * (1 + 0.03*(level-1)));
+    const gapX = 16, gapY = 18;
+    const cols = Math.max(7, Math.min(12, Math.floor((W - 40 + gapX) / (dw + gapX))));
+    const rows = Math.max(3, Math.min(6, 3 + Math.floor((level-1)/2)));
+    const totalW = cols*dw + (cols-1)*gapX;
+    const totalH = rows*dh + (rows-1)*gapY;
+    const baseTop = 80; const approach = 10*(level-1);
+    const maxTop = zone.y - totalH - 100;
+    const top = Math.min(baseTop + approach, Math.max(40, maxTop));
+    const startX = Math.max(20, (W - totalW)/2);
+    for (let r=0;r<rows;r++) for (let c=0;c<cols;c++){
+      ducks.push({x:startX + c*(dw+gapX), y: top + r*(dh+gapY), w:dw, h:dh, alive:true});
+    }
+    duckSpeed *= 1 + Math.min(0.08, 0.05 + 0.01*(level-1));
+    enemyShootEvery = Math.max(0.28, enemyShootEvery * 0.92);
+    enemyBulletBase = Math.min(720, enemyBulletBase + 24);
+  }
+
+  function levelUp(){
+    level++;
+    beep(760,140,'triangle'); setTimeout(()=>beep(980,120,'triangle'),60);
+    player.shootEvery = Math.max(0.12, player.shootEvery * 0.98);
+  }
+
+  function loop(t){
+    if (!running) return;
+    const now = t||0, dt = last ? Math.min(0.033, (now-last)/1000) : 0.016;
+    last = now;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function update(dt){
+    levelTime += dt;
+    while (levelTime >= DIFF_PERIOD){ levelTime -= DIFF_PERIOD; levelUp(); }
+
+    let ax = (keys.left?-1:0) + (keys.right?1:0);
+    player.x += ax * player.speed * dt;
+    player.x = clamp(player.x, zone.x, zone.x + zone.w - player.w);
+
+    player.shootCd -= dt;
+    if (keys.shoot && player.shootCd<=0){
+      const bw=8, bh=18;
+      const muzzleX = player.x + player.w/2 - bw/2;    // tam ortasından
+      const muzzleY = player.y - bh;                   // üst kenarın hemen üstü
+      bullets.push({x:muzzleX, y:muzzleY, w:bw, h:bh, vy:-760, from:'p'});
+      player.shootCd = player.shootEvery; beep(900,60,'square');
+    }
+
+    if (ducks.length){
+      const minX = Math.min(...ducks.map(d=>d.x));
+      const maxX = Math.max(...ducks.map(d=>d.x+d.w));
+      const hitEdge = (duckDir>0 && maxX + duckSpeed*dt > W-12) || (duckDir<0 && minX - duckSpeed*dt < 12);
+      if (hitEdge) duckDir *= -1;
+      for (const d of ducks){ d.x += duckDir * duckSpeed * dt; }
+    }
+
+    enemyShootTimer -= dt;
+    if (enemyShootTimer<=0 && ducks.length){
+      const alive = ducks.filter(d=>d.alive!==false);
+      if (alive.length){
+        const shots = Math.min(alive.length, 1 + Math.floor(level/3));
+        for (let s=0;s<shots;s++){
+          const shooter = alive[Math.floor(Math.random()*alive.length)];
+          const spread = (Math.random()*40 - 20);
+          bullets.push({ x: shooter.x + shooter.w/2 - 3, y: shooter.y + shooter.h, w: 6, h: 14, vy: enemyBulletBase + Math.random()*160, from:'e', vx: spread * 0.3 });
+          beep(260,90,'sawtooth');
+        }
+      }
+      enemyShootTimer = enemyShootEvery;
+    }
+
+    for (const b of bullets){ b.y += b.vy * dt; if (b.vx) b.x += b.vx * dt; }
+    for (let i=bullets.length-1;i>=0;i--) if (bullets[i].y<-40||bullets[i].y>H+60||bullets[i].x<-40||bullets[i].x>W+40) bullets.splice(i,1);
+
+    for (let i=bullets.length-1;i>=0;i--){
+      const b = bullets[i]; if (b.from!=='p') continue;
+      for (let j=0;j<ducks.length;j++){
+        const d = ducks[j];
+        if (d.alive===false) continue;
+        if (hit(b,d)){ ducks.splice(j,1); bullets.splice(i,1); score += 1; updateHud(); beep(1200,80,'triangle'); break; }
+      }
+    }
+
+    player.inv = Math.max(0, player.inv - dt);
+    const prect = {x:player.x,y:player.y,w:player.w,h:player.h};
+    for (let i=bullets.length-1;i>=0;i--){
+      const b = bullets[i]; if (b.from!=='e') continue;
+      const inZone = b.x>=zone.x-6 && b.x<=zone.x+zone.w+6 && b.y>=zone.y-24;
+      if (!inZone) continue;
+      if (player.inv<=0 && hit(b,prect)){
+        bullets.splice(i,1);
+        player.lives -= 1; player.inv = 1.0; updateHud(); beep(140,160,'sine');
+        if (player.lives<=0){ return gameOver(); }
+      }
+    }
+
+    if (ducks.length===0) spawnWave();
+    updateHud();
+  }
+
+  function render(){
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#0f2242'); g.addColorStop(1,'#0b1423');
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+    const rg1 = ctx.createRadialGradient(W*0.2, H*0.2, 10, W*0.2, H*0.2, 260);
+    rg1.addColorStop(0,'rgba(45,107,255,.28)'); rg1.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=rg1; ctx.fillRect(0,0,W,H);
+    const rg2 = ctx.createRadialGradient(W*0.85, H*0.25, 10, W*0.85, H*0.25, 300);
+    rg2.addColorStop(0,'rgba(255,102,204,.22)'); rg2.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=rg2; ctx.fillRect(0,0,W,H);
+
+    /* oyun alanı */
+    ctx.fillStyle='rgba(255,255,255,.03)'; ctx.fillRect(zone.x,zone.y,zone.w,zone.h);
+    ctx.strokeStyle='rgba(77,163,255,.55)'; ctx.lineWidth=2; ctx.strokeRect(zone.x,zone.y,zone.w,zone.h);
+
+    /* ördekler */
+    for (const d of ducks){
+      ctx.fillStyle='#ffd166'; ctx.fillRect(d.x, d.y, d.w, d.h);
+      ctx.fillStyle='#ffe08a'; ctx.fillRect(d.x + d.w*0.64, d.y - d.h*0.35, d.w*0.46, d.h*0.5);
+      ctx.fillStyle='#ff934f'; ctx.fillRect(d.x + d.w*1.05, d.y - d.h*0.16, d.w*0.22, d.h*0.2);
+      ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.strokeRect(d.x,d.y,d.w,d.h);
+    }
+
+    /* oyuncu (görsel varsa onunla) */
+    const blink = player.inv>0 && Math.floor(performance.now()/120)%2===0;
+    if (!blink){
+      if (playerImg.complete && playerImg.naturalWidth>0){
+        ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
+      } else {
+        ctx.fillStyle='#7bd389'; ctx.fillRect(player.x,player.y,player.w,player.h);
+        ctx.fillStyle='#a3e4b5'; ctx.fillRect(player.x + player.w/2 - 4, player.y - 12, 8, 12);
+        ctx.strokeStyle='rgba(0,0,0,.2)'; ctx.strokeRect(player.x,player.y,player.w,player.h);
+      }
+    }
+
+    /* mermiler */
+    for (const b of bullets){
+      ctx.fillStyle = (b.from==='p') ? '#4dd1ff' : '#ff5f7a';
+      ctx.fillRect(b.x,b.y,b.w,b.h);
+    }
+  }
+
+  /* ====== START/OVER & SCORE SUBMIT/LEADERBOARD ====== */
+  let startMs = 0;
+  let userHandle = '@guest';
+  let avatarImg = null;
+
+  function startGame(){
+    document.getElementById('overlay').style.display='none';
+    document.getElementById('gameover').style.display='none';
+    running=true; reset(); last=0; requestAnimationFrame(loop);
+  }
+
+  async function gameOver(){
+    running=false;
+    const runMs = Math.max(0, Date.now() - startMs);
+    // Score card hazırla
+    const cardUrl = makeScoreCard({ score, level, handle:userHandle, avatarImg });
+    document.getElementById('shareImg').src = cardUrl;
+    document.getElementById('dlBtn').setAttribute('href', cardUrl);
+
+    // Submit + fetch leaderboard
+    try { await submitScore(userHandle.replace('@',''), score, runMs); } catch(e){ console.warn('submit error', e); }
+
+    // UI
+    document.getElementById('finalTxt').textContent = `Skor: ${score} • Seviye: ${level}`;
+    document.getElementById('overlay').style.display='flex';
+    document.getElementById('startCard').style.display='none';
+    document.getElementById('gameover').style.display='block';
+
+    try { await resetAndLoadLeaderboard(userHandle.replace('@','')); } catch(e){ console.warn('leaderboard error', e); }
+  }
+
+  // Buttons
+  document.getElementById('startBtn').addEventListener('click', ()=>beginWithHandle(document.getElementById('inputHandle').value.trim()));
+  document.getElementById('guestBtn').addEventListener('click', ()=>beginWithHandle(''));
+  document.getElementById('againBtn').addEventListener('click', ()=>{ document.getElementById('startCard').style.display='none'; startGame(); });
+  document.getElementById('tweetBtn').addEventListener('click', ()=>{
+    const text = encodeURIComponent(`Duck Dodge'da oynadım! Skor: ${score} ${userHandle}\n#Sentient #Dobby #DuckDodge`);
+    window.open('https://twitter.com/intent/tweet?text='+text, '_blank');
+  });
+
+  function beginWithHandle(h){
+    if (h){
+      userHandle = h.startsWith('@') ? h : '@' + h;
+      document.getElementById('handle').textContent = userHandle;
+      loadAvatarFor(h);
+    } else {
+      userHandle='@guest';
+      document.getElementById('handle').textContent = userHandle;
+      setAvatar(null);
+    }
+    document.getElementById('userBox').style.display='flex';
+    syncHudPad();
+    startGame();
+  }
+
+  /* ================ AVATAR (X) ================ */
+  function candidateAvatarUrls(handle) {
+    const h = String(handle).replace(/^@/, '');
+    return [
+      `https://unavatar.io/x/${encodeURIComponent(h)}`,
+      `https://unavatar.io/twitter/${encodeURIComponent(h)}`,
+      `https://unavatar.io/${encodeURIComponent(h)}`,
+      `https://unavatar.io/https://x.com/${encodeURIComponent(h)}`
+    ];
+  }
+  function tryLoad(url){return new Promise((res, rej)=>{const img=new Image();img.crossOrigin='anonymous';img.onload=()=>res(url);img.onerror=rej;img.src=url;setTimeout(()=>rej(new Error('timeout')),6000);});}
+  async function resolveWorkingAvatar(handle){for(const u of candidateAvatarUrls(handle)){try{const ok = await tryLoad(u);return ok;}catch(e){}}return null;}
+  function setAvatar(src){
+    const img = document.getElementById('avatar');
+    if (!src) { img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(makeFallbackPfpSvg()); avatarImg = null; return; }
+    img.crossOrigin = 'anonymous'; img.src = src;
+    img.onerror = () => { img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(makeFallbackPfpSvg()); avatarImg = null; }
+    img.onload = () => { const a = new Image(); a.crossOrigin = 'anonymous'; a.src = src; a.onload = () => avatarImg = a; a.onerror = () => avatarImg = null; }
+  }
+  async function loadAvatarFor(handle){ const src = await resolveWorkingAvatar(handle); setAvatar(src); }
+  function makeFallbackPfpSvg(){
+    const initials = userHandle && userHandle.length > 1 ? userHandle.replace('@','').slice(0,2).toUpperCase() : 'DD';
+    return `<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#2D6BFF'/><stop offset='100%' stop-color='#FF66CC'/></linearGradient></defs><rect width='100%' height='100%' fill='url(#g)'/><text x='50%' y='56%' dominant-baseline='middle' text-anchor='middle' font-family='Montserrat, sans-serif' font-size='32' fill='#eaf2ff' font-weight='800'>${initials}</text></svg>`;
+  }
+
+  /* ================ SCORE CARD (Dobby tarzı) ================ */
+  function makeScoreCard({ score, level, handle, avatarImg }){
+    const W=960,H=540;
+    const c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d');
+
+    // arka plan
+    const bg1=g.createLinearGradient(0,0,0,H); bg1.addColorStop(0,'#0b0e12'); bg1.addColorStop(1,'#0e141a'); g.fillStyle=bg1; g.fillRect(0,0,W,H);
+    g.fillStyle='rgba(45,107,255,.22)'; g.beginPath(); g.ellipse(W*0.2,H*0.2,240,140,0,0,Math.PI*2); g.fill();
+    g.fillStyle='rgba(255,102,204,.2)'; g.beginPath(); g.ellipse(W*0.82,H*0.3,300,180,0,0,Math.PI*2); g.fill();
+
+    // diagonal dobby şerit
+    g.save();
+    g.translate(-60,0); g.rotate(-Math.PI/28);
+    const grad=g.createLinearGradient(0,0,0,220); grad.addColorStop(0,'#2D6BFF'); grad.addColorStop(1,'#FF66CC');
+    g.fillStyle=grad; g.fillRect(0, H*0.52, W+200, 44);
+    g.restore();
+
+    // başlık
+    g.fillStyle='#EDEFF2'; g.font='900 60px Montserrat, sans-serif'; g.fillText('DUCK DODGE', 40, 98);
+    g.fillStyle='#9fb3d4'; g.font='700 28px Montserrat, sans-serif'; g.fillText('Score', 40, 160);
+    g.fillStyle='#7bd389'; g.font='900 96px Montserrat, sans-serif'; g.fillText(String(score), 40, 242);
+    g.fillStyle='#9fb3d4'; g.font='700 26px Montserrat, sans-serif'; g.fillText('Level', 40, 290);
+    g.fillStyle='#EDEFF2'; g.font='800 54px Montserrat, sans-serif'; g.fillText(String(level), 40, 340);
+
+    // oyuncu satırı
+    const at = handle || '@guest';
+    const AX = 40, AY = 370, AR = 56;
+    g.save(); g.beginPath(); g.arc(AX + AR, AY + AR, AR, 0, Math.PI*2); g.clip();
+    if (avatarImg){ g.drawImage(avatarImg, AX, AY, AR*2, AR*2); } else { g.fillStyle='#1b2436'; g.fillRect(AX, AY, AR*2, AR*2); g.fillStyle='#eaf2ff'; g.font='800 42px Montserrat, sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText((at.replace('@','').slice(0,2)||'DD').toUpperCase(), AX+AR, AY+AR); g.textAlign='start'; g.textBaseline='alphabetic'; }
+    g.restore();
+    g.fillStyle='#EDEFF2'; g.font='800 42px Montserrat, sans-serif'; g.fillText(at, AX + AR*2 + 20, AY + AR + 12);
+
+    // footer
+    g.strokeStyle='#2D6BFF'; g.lineWidth=6; rounded(g, 12, 12, W-24, H-24, 16); g.stroke();
+    g.fillStyle='#9fb3d4'; g.font='600 24px Montserrat, sans-serif'; g.fillText('sentient • dobby', W-290, H-26);
+
+    return c.toDataURL('image/png');
+
+    function rounded(gc,x,y,w,h,r){const rr=Math.min(r,w/2,h/2);gc.beginPath();gc.moveTo(x+rr,y);gc.arcTo(x+w,y,x+w,y+h,rr);gc.arcTo(x+w,y+h,x,y+h,rr);gc.arcTo(x,y+h,x,y,rr);gc.arcTo(x,y,x+w,y,rr);gc.closePath();}
+  }
+
+  /* ================ API (Leaderboard) ================ */
+  const lb = document.getElementById('lb-list'); const lbMeta = document.getElementById('lb-meta'); const lbLoading = document.getElementById('lb-loading');
+  let lbOffset = 0, lbPage = 50, lbTotal = null, lbBusy = false;
+
+  function apiUrl(p){ return (API_BASE || '') + p; }
+  async function submitScore(handle, score, timeMs){
+    const r = await fetch(apiUrl(API_SUBMIT), { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ handle, score, timeMs }) });
+    if (!r.ok) throw new Error('submit failed');
+    return r.json();
+  }
+  async function fetchLeaderboardPage(start=0, count=50, rankFor=null){
+    const u = new URL(apiUrl(API_LEADER), window.location.href);
+    u.searchParams.set('start', String(start));
+    u.searchParams.set('count', String(count));
+    if (rankFor) u.searchParams.set('rankFor', rankFor);
+    const r = await fetch(u.toString(), { headers:{'accept':'application/json'} });
+    if (!r.ok) throw new Error('leaderboard failed');
+    return r.json();
+  }
+  function formatMs(ms){ return (ms/1000).toFixed(2) + 's'; }
+  function avatarFor(handle){ return `https://unavatar.io/x/${encodeURIComponent(handle)}`; }
+  function renderLeaderboardItems(items, startIndex){
+    items.forEach((it, idx)=>{
+      const rank = startIndex + idx + 1;
+      const li = document.createElement('li'); li.className = 'lb-item';
+      const av = avatarFor(it.handle);
+      li.innerHTML = `<span class="lb-rank">#${rank}</span>
+        <img class="lb-avatar" src="${av}" onerror="this.style.visibility='hidden'"/>
+        <span class="lb-handle">@${it.handle}</span>
+        <span class="lb-stats">${it.score} • ${formatMs(it.timeMs)}</span>`;
+      lb.appendChild(li);
+    });
+  }
+  async function resetAndLoadLeaderboard(rankFor=null){
+    lb.innerHTML = ''; lbOffset = 0; lbTotal = null;
+    await loadMoreLeaderboard(rankFor);
+  }
+  async function loadMoreLeaderboard(rankFor=null){
+    if (lbBusy) return; lbBusy = true; lbLoading.style.display='block';
+    try {
+      const data = await fetchLeaderboardPage(lbOffset, lbPage, rankFor);
+      if (lbTotal==null) lbTotal = data.total ?? 0;
+      renderLeaderboardItems(data.items || [], lbOffset);
+      lbOffset += (data.items || []).length;
+      lbMeta.textContent = lbTotal ? `${lbOffset}/${lbTotal}` : '';
+    } finally { lbBusy=false; lbLoading.style.display='none'; }
+  }
+
+  /* ===== utility: userBox genişliğine göre HUD padding ===== */
+  function syncHudPad(){
+    const ub = document.getElementById('userBox');
+    const pad = (ub && ub.style.display!=='none') ? (ub.offsetWidth + 20) : 12;
+    document.documentElement.style.setProperty('--hud-left-pad', pad + 'px');
+  }
+
+  /* ===== INIT ===== */
+  resize(); // boyut+pad
+  document.getElementById('userBox').style.display='none'; // handle girilene kadar gizle
+  window.addEventListener('load', syncHudPad);
+
+  /* === AVATAR helpers === */
+  // (kullanıcı kutusu açıldığında HUD padding'i güncellenir)
+  </script>
+
+  <!-- Avatar yardımcıları & fetch -->
+  <script>
+    async function loadAvatarFor(handle) {
+      function candidateAvatarUrls(h) {
+        const v = String(h).replace(/^@/, '');
+        return [
+          `https://unavatar.io/x/${encodeURIComponent(v)}`,
+          `https://unavatar.io/twitter/${encodeURIComponent(v)}`,
+          `https://unavatar.io/${encodeURIComponent(v)}`,
+          `https://unavatar.io/https://x.com/${encodeURIComponent(v)}`
+        ];
+      }
+      function tryLoad(url){return new Promise((res,rej)=>{const img=new Image();img.crossOrigin='anonymous';img.onload=()=>res(url);img.onerror=rej;img.src=url;setTimeout(()=>rej(new Error('timeout')),6000);});}
+      let src=null; for(const u of candidateAvatarUrls(handle)){try{src=await tryLoad(u);break;}catch(e){}}
+      setAvatar(src);
+      syncHudPad();
+    }
+    function setAvatar(src){
+      const img = document.getElementById('avatar');
+      if (!src) {
+        img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(makeFallbackPfpSvg());
+        avatarImg = null; return;
+      }
+      img.crossOrigin='anonymous'; img.src = src;
+      img.onerror = () => { img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(makeFallbackPfpSvg()); avatarImg=null; };
+      img.onload  = () => { const a = new Image(); a.crossOrigin='anonymous'; a.src = src; a.onload=()=>avatarImg=a; a.onerror=()=>avatarImg=null; };
+    }
+    function makeFallbackPfpSvg(){
+      const initials = (document.getElementById('handle').textContent||'@DD').replace('@','').slice(0,2).toUpperCase();
+      return `<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#2D6BFF'/><stop offset='100%' stop-color='#FF66CC'/></linearGradient></defs><rect width='100%' height='100%' fill='url(#g)'/><text x='50%' y='56%' dominant-baseline='middle' text-anchor='middle' font-family='Montserrat, sans-serif' font-size='32' fill='#eaf2ff' font-weight='800'>${initials}</text></svg>`;
+    }
+  </script>
+</body>
+</html>
