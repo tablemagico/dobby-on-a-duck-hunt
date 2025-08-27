@@ -333,25 +333,57 @@
   }
 
   function spawnWave(){
-    ducks.length = 0;
-    const dw = Math.min(110, 76 * (1 + 0.03*(level-1)));
-    const dh = Math.min(72,  50 * (1 + 0.03*(level-1)));
-    const gapX = 16, gapY = 18;
-    const cols = Math.max(7, Math.min(12, Math.floor((W - 40 + gapX) / (dw + gapX))));
-    const rows = Math.max(3, Math.min(6, 3 + Math.floor((level-1)/2)));
-    const totalW = cols*dw + (cols-1)*gapX;
-    const totalH = rows*dh + (rows-1)*gapY;
-    const baseTop = 84; const approach = 10*(level-1);
-    const maxTop = zone.y - totalH - 96;
-    const top = Math.min(baseTop + approach, Math.max(40, maxTop));
-    const startX = Math.max(20, (W - totalW)/2);
-    for (let r=0;r<rows;r++) for (let c=0;c<cols;c++){
-      ducks.push({x:startX + c*(dw+gapX), y: top + r*(dh+gapY), w:dw, h:dh, alive:true});
+  ducks.length = 0;
+
+  // Ekran genişliğine göre hedef kolon sayısı (mobilde daha az kolon)
+  const targetCols = (W < 400) ? 4 : (W < 700 ? 6 : 8);
+
+  // Aralıklar ekran boyuna göre
+  const gapX = Math.max(8, Math.floor(W * 0.02));
+  const gapY = Math.max(10, Math.floor(H * 0.012));
+
+  // Satır sayısı zorlukla artsın ama sınırlı kalsın
+  const rows = Math.max(3, Math.min(6, 3 + Math.floor((level - 1) / 2)));
+
+  // Her ördeğin genişliğini, mevcut genişliğe ve kolon sayısına göre hesapla
+  let dwBase = Math.floor((W - 40 - gapX * (targetCols - 1)) / targetCols);
+  // Çok küçük/büyük aşırılıkları kırp
+  dwBase = clamp(dwBase, 40, 90);
+
+  // Zorluk arttıkça az artan bir ölçek (maks %25)
+  const scale = 1 + Math.min(0.25, 0.02 * (level - 1));
+  const dw = Math.floor(dwBase * scale);
+  const dh = Math.floor(dw * 0.66); // en-boy oranı: hafif yatay ördek
+
+  const totalW = targetCols * dw + (targetCols - 1) * gapX;
+  const totalH = rows * dh + (rows - 1) * gapY;
+
+  // Üstten mesafe: mobilde de alanı aşmasın
+  const marginTop = Math.max(40, Math.min(120, Math.floor(H * 0.12)));
+  const approach = Math.floor((level - 1) * 6); // seviye ile yavaşça yaklaşsın
+  const maxTop = zone.y - totalH - 80;
+  const top = clamp(marginTop + approach, 30, Math.max(30, maxTop));
+
+  const startX = Math.max(20, Math.floor((W - totalW) / 2));
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < targetCols; c++) {
+      ducks.push({
+        x: startX + c * (dw + gapX),
+        y: top + r * (dh + gapY),
+        w: dw,
+        h: dh,
+        alive: true
+      });
     }
-    duckSpeed *= 1 + Math.min(0.08, 0.05 + 0.01*(level-1));
-    enemyShootEvery = Math.max(0.28, enemyShootEvery * 0.92);
-    enemyBulletBase = Math.min(720, enemyBulletBase + 24);
   }
+
+  // Seviye ile hafif hız/ateş ayarı (aşırı olmasın)
+  duckSpeed = Math.min(140, Math.max(40, duckSpeed * (1 + 0.06)));
+  enemyShootEvery = Math.max(0.25, enemyShootEvery * 0.94);
+  enemyBulletBase = Math.min(760, enemyBulletBase + 18);
+}
+
 
   function levelUp(){
     level++;
@@ -412,6 +444,27 @@
 
     for (const b of bullets){ b.y += b.vy * dt; if (b.vx) b.x += b.vx * dt; }
     for (let i=bullets.length-1;i>=0;i--) if (bullets[i].y<-40||bullets[i].y>H+60||bullets[i].x<-40||bullets[i].x>W+40) bullets.splice(i,1);
+// === PLAYER BULLETS → DUCKS COLLISION ===
+for (let bi = bullets.length - 1; bi >= 0; bi--) {
+  const b = bullets[bi];
+  if (b.from !== 'p') continue; // sadece oyuncu mermileri
+
+  for (let di = ducks.length - 1; di >= 0; di--) {
+    const d = ducks[di];
+    if (!d || d.alive === false) continue;
+
+    // Rect-Rect çarpışma (hit fonksiyonunu zaten kullanıyoruz)
+    if (hit({ x: b.x, y: b.y, w: b.w, h: b.h }, d)) {
+      // mermi ve ördeği kaldır, skor artır
+      bullets.splice(bi, 1);
+      ducks.splice(di, 1);
+      score += 1;
+      updateHud();
+      beep(1020, 80, 'triangle');
+      break; // aynı mermiyle birden fazla ördek sayma
+    }
+  }
+}
 
     player.inv = Math.max(0, player.inv - dt);
     const prect = {x:player.x,y:player.y,w:player.w,h:player.h};
