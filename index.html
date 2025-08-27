@@ -308,7 +308,7 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
     o.start(t); o.stop(t+ms/1000+0.05);
   }
 
-  const player = { w:140, h:103, x:0, y:0, speed:460, shootCd:0, shootEvery:0.16, lives:3, inv:0 };
+  const player = { w:130, h:103, x:0, y:0, speed:460, shootCd:0, shootEvery:0.16, lives:3, inv:0 };
   const bullets = [];
   const ducks = [];
   let duckDir = 1;
@@ -639,7 +639,7 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
   g.restore();
 
   // Başlık & skor & seviye
-  g.fillStyle='#EDEFF2'; g.font='900 60px Montserrat, sans-serif'; g.fillText('OBBY DUCK DODGE', 40, 98);
+  g.fillStyle='#EDEFF2'; g.font='900 60px Montserrat, sans-serif'; g.fillText('DOBBY DUCK DODGE', 40, 98);
   g.fillStyle='#9fb3d4'; g.font='700 28px Montserrat, sans-serif'; g.fillText('Score', 40, 160);
   g.fillStyle='#7bd389'; g.font='900 96px Montserrat, sans-serif'; g.fillText(String(score), 40, 242);
   g.fillStyle='#9fb3d4'; g.font='700 26px Montserrat, sans-serif'; g.fillText('Level', 40, 290);
