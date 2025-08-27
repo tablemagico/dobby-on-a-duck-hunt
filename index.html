@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <title>Duck Dodge — Dobby Mobile</title>
@@ -10,14 +10,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&display=swap" rel="stylesheet"/>
   <style>
     :root{
-      /* Dobby teması */
+      /* Dobby theme */
       --dobby-violet:#7C4DFF;
       --dobby-cyan:#00E5FF;
       --ink:#0a0b0d; --panel:#11161b; --muted:#c9d3de;
-      --hud-left-pad:12px;         /* avatar genişliğine göre JS doldurur */
+      --hud-left-pad:12px;         /* JS sets based on avatar width */
       --safe-top:env(safe-area-inset-top, 0px);
       --safe-bottom:env(safe-area-inset-bottom, 0px);
-      --app-h:100vh;               /* JS ile visualViewport yüksekliğine güncellenir */
+      --app-h:100vh;               /* updated via visualViewport by JS */
     }
 
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -37,7 +37,7 @@
       background-size:28px 28px,34px 34px;background-position:0 0,14px 18px;
     }
 
-    /* Tam ekran oyun alanı */
+    /* Fullscreen game area */
     #game{display:block;width:100vw;height:var(--app-h);touch-action:none;cursor:crosshair}
 
     /* HUD */
@@ -57,7 +57,7 @@
     .bar{height:10px;background:#1a2436;border:1px solid #2a3550;border-radius:999px;overflow:hidden}
     .fill{height:100%;width:0%;background:linear-gradient(90deg,var(--dobby-violet),var(--dobby-cyan))}
 
-    /* X profili (sol üst) */
+    /* X profile (top-left) */
     #userBox{
       position:fixed;left:12px;top:calc(8px + var(--safe-top));z-index:6;display:none;
       align-items:center;gap:10px;background:rgba(17,22,27,.88);backdrop-filter:blur(6px);
@@ -98,7 +98,7 @@
     .sharePreview{width:100%;background:#0f1420;border:1px dashed #2a3550;border-radius:12px;padding:8px;display:flex;align-items:center;justify-content:center;margin-top:10px}
     .sharePreview img{width:100%;height:auto;max-height:240px;object-fit:contain;display:block}
 
-    /* Mobil dokunmatik butonlar */
+    /* Touch controls */
     #touchControls{
       position:fixed;left:0;right:0;bottom:0;z-index:7;display:none;
       padding:12px calc(12px + var(--safe-bottom)); gap:10px; align-items:flex-end; justify-content:space-between; pointer-events:none;
@@ -120,7 +120,7 @@
   </style>
 </head>
 <body>
-  <!-- X profili -->
+  <!-- X profile -->
   <div id="userBox" title="X profile">
     <img id="avatar" alt="pfp" src=""/>
     <div class="hdl" id="handle">@guest</div>
@@ -129,14 +129,14 @@
   <!-- HUD -->
   <div class="hud">
     <div class="hud-left">
-      <div class="chip big">Skor: <span id="score">0</span></div>
-      <div class="chip big">Can: <span id="lives">❤️❤️❤️</span></div>
+      <div class="chip big">Score: <span id="score">0</span></div>
+      <div class="chip big">Lives: <span id="lives">❤️❤️❤️</span></div>
     </div>
     <div class="hud-right">
       <div class="chip diff">
         <div class="row" style="margin:0">
-          <span class="lvl" id="lvlLabel">Seviye 1</span>
-          <span class="cd">Sonraki: <span id="lvlCd">15.0s</span></span>
+          <span class="lvl" id="lvlLabel">Level 1</span>
+          <span class="cd">Next in: <span id="lvlCd">15.0s</span></span>
         </div>
         <div class="bar"><div class="fill" id="lvlFill"></div></div>
       </div>
@@ -145,7 +145,7 @@
 
   <canvas id="game"></canvas>
 
-  <!-- Mobil dokunmatik butonlar -->
+  <!-- Touch controls -->
   <div id="touchControls" aria-label="touch controls">
     <button id="leftBtn" class="tbtn">◀︎</button>
     <button id="fireBtn" class="tbtn">FIRE</button>
@@ -155,47 +155,55 @@
   <!-- START -->
   <div id="overlay" role="dialog" aria-modal="true">
     <div class="card" id="startCard">
-      <h1>🦆 Duck Dodge — Dobby</h1>
-      <p>← → ile <b>sağa/sola</b> hareket et. <b>Space</b> veya <b>FIRE</b> ile yukarı ateş et.</p>
-      <p class="muted">X (Twitter) kullanıcı adını gir; avatarın sol üstte ve leaderboard’da gözüksün.</p>
-      <div class="row"><input id="inputHandle" type="text" placeholder="ör. cryptoayax" autocomplete="off"/></div>
+      <h1>🦆 Dobby on a Duck Hunt</h1>
+      <p>Move <b>left/right</b> with ← →. Shoot upward with <b>Space</b> or <b>FIRE</b>.</p>
+      <p class="muted">Enter your X (Twitter) handle; we’ll show your avatar at the top-left and on the leaderboard. </p>
+      <p style="color:#ff3b59; font-weight:700; margin:4px 0 0;">
+  The game is partially compatible with mobile devices, but I still recommend playing it on your desktop computer.
+</p>
+      <div class="row"><input id="inputHandle" type="text" placeholder="Your X Name:" autocomplete="off"/></div>
       <div class="row">
-        <button id="startBtn" class="btn">Başla (Enter)</button>
-        <button id="guestBtn" class="btn secondary">X olmadan oyna</button>
+        <button id="startBtn" class="btn">Start (Enter)</button>
+        <button id="guestBtn" class="btn secondary">Play without X</button>
       </div>
     </div>
 
     <!-- GAME OVER + LEADERBOARD + SCORE CARD -->
     <div class="card" id="gameover">
-      <h1>Oyun Bitti</h1>
-      <p id="finalTxt">Skor: 0</p>
+      <h1>Game Over</h1>
+      <p id="finalTxt">Score: 0</p>
       <div class="row">
-        <button id="againBtn" class="btn" style="flex:1">Tekrar Oyna (Enter)</button>
+        <button id="againBtn" class="btn" style="flex:1">Play Again (Enter)</button>
       </div>
 
       <div class="sharePreview"><img id="shareImg" alt="score card"/></div>
       <div class="row">
-        <a id="dlBtn" download="duckdodge-score.png"><button class="btn secondary" style="flex:1">Kartı İndir</button></a>
+        <a id="dlBtn" download="duckdodge-score.png"><button class="btn secondary" style="flex:1">Download Card</button></a>
         <button id="tweetBtn" class="btn" style="flex:1">Share to X</button>
       </div>
 
       <div id="leaderboard">
         <div id="lb-title"><span>🏆 Leaderboard</span><span id="lb-meta"></span></div>
         <ol id="lb-list"></ol>
-        <div id="lb-loading">Yükleniyor…</div>
+        <div id="lb-loading">Loading…</div>
       </div>
-      <p class="muted" style="margin-top:8px">Sıralama: Skor yüksek → eşitlikte süre kısa önde.</p>
+      <p class="muted" style="margin-top:8px">Ranking: Higher score first; ties break by shorter time.</p>
     </div>
   </div>
 
   <script>
-  /* ================== EKRAN / MOBİL TAM YÜKSEKLİK ================== */
 
-  /* ===== SIZE KNOB (tek ayar yeri) =====
-   0.5 = çok küçük, 1.0 = normal, 1.5 = büyük  */
+    // Mascot (score card'a basılacak)
+const MASCOT_IMG_SRC = 'assets/dobby_mascot.png';
+const mascotImg = new Image();
+mascotImg.src = MASCOT_IMG_SRC;
+  /* ================== SCREEN / MOBILE FULL HEIGHT ================== */
+
+  /* ===== SIZE KNOB (single place to adjust) =====
+   0.5 = very small, 1.0 = normal, 1.5 = large  */
 const DUCK_SIZE_K = 0.38;
 
-/* Mobil/desktop tespiti (ekran dar ise mobil gibi davran) */
+/* Mobile/desktop detection (treat narrow screens as mobile) */
 const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 520;
 
   function setAppHeight(){
@@ -253,13 +261,13 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
     if (e.code==='Space')      keys.shoot = false;
   });
 
-  // scroll/zoom korumaları
+  // scroll/zoom guards
   let lastTouchEnd=0;
   document.addEventListener('touchend', (e)=>{ const now=Date.now(); if (now-lastTouchEnd<=350) e.preventDefault(); lastTouchEnd=now; }, {passive:false});
   canvas.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
   canvas.addEventListener('gesturestart', e=>e.preventDefault());
 
-  // Mobil butonlar
+  // Mobile buttons
   const leftBtn  = document.getElementById('leftBtn');
   const rightBtn = document.getElementById('rightBtn');
   const fireBtn  = document.getElementById('fireBtn');
@@ -277,7 +285,7 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
   bindHold(rightBtn, ()=>{ keys.right=true; }, ()=>{ keys.right=false; });
   bindHold(fireBtn,  ()=>{ keys.shoot=true; }, ()=>{ keys.shoot=false; });
 
-  // Ekranın üst kısmına dokun = ateş
+  // Tap upper half = shoot
   function onPointer(e){
     const y = e.clientY;
     if (e.type==='pointerdown' || e.type==='pointermove'){
@@ -300,7 +308,7 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
     o.start(t); o.stop(t+ms/1000+0.05);
   }
 
-  const player = { w:68, h:56, x:0, y:0, speed:460, shootCd:0, shootEvery:0.16, lives:3, inv:0 };
+  const player = { w:140, h:103, x:0, y:0, speed:460, shootCd:0, shootEvery:0.16, lives:3, inv:0 };
   const bullets = [];
   const ducks = [];
   let duckDir = 1;
@@ -321,7 +329,7 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
     document.getElementById('score').textContent = score;
     const hearts = ['❤️','❤️','❤️'].map((h,i)=> i<player.lives ? h : '🤍').join('');
     document.getElementById('lives').textContent = hearts;
-    document.getElementById('lvlLabel').textContent = `Seviye ${level}`;
+    document.getElementById('lvlLabel').textContent = `Level ${level}`;
     const left = Math.max(0, DIFF_PERIOD - levelTime);
     document.getElementById('lvlCd').textContent = `${left.toFixed(1)}s`;
     const pct = Math.min(1, levelTime / DIFF_PERIOD) * 100;
@@ -336,44 +344,44 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
     spawnWave();
     player.x = zone.x + zone.w/2 - player.w/2;
     player.y = zone.y + zone.h - player.h - 6;
-    startMs = Date.now(); // run süresi
+    startMs = Date.now(); // run duration
     updateHud();
   }
 
   function spawnWave(){
   ducks.length = 0;
 
-  // Ekran genişliğine göre mantıklı kolon sayısı
+  // Columns based on width
   const targetCols = isMobile
-    ? (W < 360 ? 4 : 5)      // mobilde 4-5 kolon
-    : (W < 900 ? 7 : 8);     // desktopta 7-8 kolon
+    ? (W < 360 ? 4 : 5)
+    : (W < 900 ? 7 : 8);
 
-  // Aralıklar
+  // Gaps
   const gapX = Math.max(8, Math.floor(W * 0.02));
   const gapY = Math.max(10, Math.floor(H * 0.012));
 
-  // Satır sayısı (seviyeyle artsın ama sınırlı)
+  // Rows (increase with level, capped)
   const rows = Math.max(3, Math.min(6, 3 + Math.floor((level - 1) / 2)));
 
-  // Taban genişlik: ekran genişliğine/kolon sayısına dayanır
+  // Base width
   let dwBase = Math.floor((W - 40 - gapX * (targetCols - 1)) / targetCols);
 
-  // Mobilde üst sınırı daha düşük tutalım
+  // Tighter caps on mobile
   const DW_MIN = isMobile ? 22 : 32;
   const DW_MAX = isMobile ? 56 : 88;
 
-  // Seviye ile aşırı büyümesin diye ufak bir scale
+  // Gentle level scale
   const levelScale = 1 + Math.min(0.15, 0.015 * (level - 1));
 
-  // SON ördek boyutu: base * kullanıcı ayarı * seviye ölçeği
+  // Final duck size
   const dw = clamp(Math.round(dwBase * DUCK_SIZE_K * levelScale), DW_MIN, DW_MAX);
-  const dh = Math.round(dw * 0.66); // oran
+  const dh = Math.round(dw * 0.66);
 
   const totalW = targetCols * dw + (targetCols - 1) * gapX;
   const totalH = rows * dh + (rows - 1) * gapY;
 
   const marginTop = Math.max(36, Math.min(120, Math.floor(H * 0.12)));
-  const approach = Math.floor((level - 1) * 5);  // seviye ile yavaşça yaklaşsın
+  const approach = Math.floor((level - 1) * 5);
   const maxTop = zone.y - totalH - 80;
   const top = clamp(marginTop + approach, 26, Math.max(26, maxTop));
 
@@ -391,7 +399,7 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
     }
   }
 
-  // Zorluk artışı (çok agresif değil)
+  // Difficulty bumps
   duckSpeed = Math.min(140, Math.max(40, duckSpeed * (1 + 0.05)));
   enemyShootEvery = Math.max(0.28, enemyShootEvery * 0.95);
   enemyBulletBase = Math.min(760, enemyBulletBase + 14);
@@ -422,12 +430,12 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
     player.x += ax * player.speed * dt;
     player.x = clamp(player.x, zone.x, zone.x + zone.w - player.w);
 
-    // MERMİ: görselin tam ortasından
+    // BULLET: from exact middle of sprite
     player.shootCd -= dt;
     if (keys.shoot && player.shootCd<=0){
       const bw=8, bh=18;
-      const muzzleX = player.x + player.w/2 - bw/2;   // tam orta
-      const muzzleY = player.y - bh;                  // üst kenardan
+      const muzzleX = player.x + player.w/2 - bw/2;
+      const muzzleY = player.y - bh;
       bullets.push({x:muzzleX, y:muzzleY, w:bw, h:bh, vy:-760, from:'p'});
       player.shootCd = player.shootEvery; beep(900,60,'square');
       if (navigator.vibrate) try{ navigator.vibrate(10); }catch(_){}
@@ -458,27 +466,23 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
 
     for (const b of bullets){ b.y += b.vy * dt; if (b.vx) b.x += b.vx * dt; }
     for (let i=bullets.length-1;i>=0;i--) if (bullets[i].y<-40||bullets[i].y>H+60||bullets[i].x<-40||bullets[i].x>W+40) bullets.splice(i,1);
-// === PLAYER BULLETS → DUCKS COLLISION ===
-for (let bi = bullets.length - 1; bi >= 0; bi--) {
-  const b = bullets[bi];
-  if (b.from !== 'p') continue; // sadece oyuncu mermileri
-
-  for (let di = ducks.length - 1; di >= 0; di--) {
-    const d = ducks[di];
-    if (!d || d.alive === false) continue;
-
-    // Rect-Rect çarpışma (hit fonksiyonunu zaten kullanıyoruz)
-    if (hit({ x: b.x, y: b.y, w: b.w, h: b.h }, d)) {
-      // mermi ve ördeği kaldır, skor artır
-      bullets.splice(bi, 1);
-      ducks.splice(di, 1);
-      score += 1;
-      updateHud();
-      beep(1020, 80, 'triangle');
-      break; // aynı mermiyle birden fazla ördek sayma
+    // PLAYER BULLETS → DUCKS COLLISION
+    for (let bi = bullets.length - 1; bi >= 0; bi--) {
+      const b = bullets[bi];
+      if (b.from !== 'p') continue;
+      for (let di = ducks.length - 1; di >= 0; di--) {
+        const d = ducks[di];
+        if (!d || d.alive === false) continue;
+        if (hit({ x: b.x, y: b.y, w: b.w, h: b.h }, d)) {
+          bullets.splice(bi, 1);
+          ducks.splice(di, 1);
+          score += 1;
+          updateHud();
+          beep(1020, 80, 'triangle');
+          break;
+        }
+      }
     }
-  }
-}
 
     player.inv = Math.max(0, player.inv - dt);
     const prect = {x:player.x,y:player.y,w:player.w,h:player.h};
@@ -498,7 +502,7 @@ for (let bi = bullets.length - 1; bi >= 0; bi--) {
   }
 
   function render(){
-    // arka plan
+    // background
     const g = ctx.createLinearGradient(0,0,0,H);
     g.addColorStop(0,'#0f1b31'); g.addColorStop(1,'#0b1423');
     ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
@@ -507,11 +511,11 @@ for (let bi = bullets.length - 1; bi >= 0; bi--) {
     const rg2 = ctx.createRadialGradient(W*0.85, H*0.25, 10, W*0.85, H*0.25, 300);
     rg2.addColorStop(0,'rgba(0,229,255,.20)'); rg2.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=rg2; ctx.fillRect(0,0,W,H);
 
-    // oyun alanı
+    // safe zone
     ctx.fillStyle='rgba(255,255,255,.03)'; ctx.fillRect(zone.x,zone.y,zone.w,zone.h);
     ctx.strokeStyle='rgba(124,77,255,.55)'; ctx.lineWidth=2; ctx.strokeRect(zone.x,zone.y,zone.w,zone.h);
 
-    // ördekler
+    // ducks
     for (const d of ducks){
       ctx.fillStyle='#ffd166'; ctx.fillRect(d.x, d.y, d.w, d.h);
       ctx.fillStyle='#ffe08a'; ctx.fillRect(d.x + d.w*0.64, d.y - d.h*0.35, d.w*0.46, d.h*0.5);
@@ -519,7 +523,7 @@ for (let bi = bullets.length - 1; bi >= 0; bi--) {
       ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.strokeRect(d.x,d.y,d.w,d.h);
     }
 
-    // oyuncu
+    // player
     const blink = player.inv>0 && Math.floor(performance.now()/120)%2===0;
     if (!blink){
       if (playerImg.complete && playerImg.naturalWidth>0){
@@ -530,7 +534,7 @@ for (let bi = bullets.length - 1; bi >= 0; bi--) {
       }
     }
 
-    // mermiler
+    // bullets
     for (const b of bullets){
       ctx.fillStyle = (b.from==='p') ? '#4dd1ff' : '#ff5f7a';
       ctx.fillRect(b.x,b.y,b.w,b.h);
@@ -557,7 +561,7 @@ for (let bi = bullets.length - 1; bi >= 0; bi--) {
 
     try { await submitScore(userHandle.replace('@',''), score, runMs); } catch(e){ console.warn('submit error', e); }
 
-    document.getElementById('finalTxt').textContent = `Skor: ${score} • Seviye: ${level}`;
+    document.getElementById('finalTxt').textContent = `Score: ${score} • Level: ${level}`;
     document.getElementById('overlay').style.display='flex';
     document.getElementById('startCard').style.display='none';
     document.getElementById('gameover').style.display='block';
@@ -569,7 +573,7 @@ for (let bi = bullets.length - 1; bi >= 0; bi--) {
   document.getElementById('guestBtn').addEventListener('click', ()=>beginWithHandle(''));
   document.getElementById('againBtn').addEventListener('click', ()=>{ document.getElementById('startCard').style.display='none'; startGame(); });
   document.getElementById('tweetBtn').addEventListener('click', ()=>{
-    const text = encodeURIComponent(`Duck Dodge'da oynadım! Skor: ${score} ${userHandle}\n#Sentient #Dobby #DuckDodge`);
+    const text = encodeURIComponent(`I played Dobby Duck Dodge! Score: ${score} ${userHandle}\n#Sentient #Dobby #DuckDodge`);
     window.open('https://twitter.com/intent/tweet?text='+text, '_blank');
   });
 
@@ -616,37 +620,82 @@ for (let bi = bullets.length - 1; bi >= 0; bi--) {
 
   /* ====== Score Card ====== */
   function makeScoreCard({ score, level, handle, avatarImg }){
-    const W=960,H=540;
-    const c=document.createElement('canvas'); c.width=W; c.height=H; const g=c.getContext('2d');
+  const W=960, H=540;
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const g=c.getContext('2d');
 
-    const bg1=g.createLinearGradient(0,0,0,H); bg1.addColorStop(0,'#0b0e12'); bg1.addColorStop(1,'#0e141a'); g.fillStyle=bg1; g.fillRect(0,0,W,H);
-    g.fillStyle='rgba(124,77,255,.22)'; g.beginPath(); g.ellipse(W*0.2,H*0.2,240,140,0,0,Math.PI*2); g.fill();
-    g.fillStyle='rgba(0,229,255,.2)'; g.beginPath(); g.ellipse(W*0.82,H*0.3,300,180,0,0,Math.PI*2); g.fill();
+  // Arka plan
+  const bg1=g.createLinearGradient(0,0,0,H);
+  bg1.addColorStop(0,'#0b0e12'); bg1.addColorStop(1,'#0e141a');
+  g.fillStyle=bg1; g.fillRect(0,0,W,H);
+  g.fillStyle='rgba(124,77,255,.22)'; g.beginPath(); g.ellipse(W*0.2,H*0.2,240,140,0,0,Math.PI*2); g.fill();
+  g.fillStyle='rgba(0,229,255,.20)'; g.beginPath(); g.ellipse(W*0.82,H*0.3,300,180,0,0,Math.PI*2); g.fill();
 
-    g.save(); g.translate(-60,0); g.rotate(-Math.PI/28);
-    const grad=g.createLinearGradient(0,0,0,220); grad.addColorStop(0,'#7C4DFF'); grad.addColorStop(1,'#00E5FF');
-    g.fillStyle=grad; g.fillRect(0, H*0.52, W+200, 44);
-    g.restore();
+  // Dobby şerit
+  g.save(); g.translate(-60,0); g.rotate(-Math.PI/28);
+  const grad=g.createLinearGradient(0,0,0,220);
+  grad.addColorStop(0,'#7C4DFF'); grad.addColorStop(1,'#00E5FF');
+  g.fillStyle=grad; g.fillRect(0, H*0.52, W+200, 44);
+  g.restore();
 
-    g.fillStyle='#EDEFF2'; g.font='900 60px Montserrat, sans-serif'; g.fillText('DUCK DODGE', 40, 98);
-    g.fillStyle='#9fb3d4'; g.font='700 28px Montserrat, sans-serif'; g.fillText('Score', 40, 160);
-    g.fillStyle='#7bd389'; g.font='900 96px Montserrat, sans-serif'; g.fillText(String(score), 40, 242);
-    g.fillStyle='#9fb3d4'; g.font='700 26px Montserrat, sans-serif'; g.fillText('Level', 40, 290);
-    g.fillStyle='#EDEFF2'; g.font='800 54px Montserrat, sans-serif'; g.fillText(String(level), 40, 340);
+  // Başlık & skor & seviye
+  g.fillStyle='#EDEFF2'; g.font='900 60px Montserrat, sans-serif'; g.fillText('OBBY DUCK DODGE', 40, 98);
+  g.fillStyle='#9fb3d4'; g.font='700 28px Montserrat, sans-serif'; g.fillText('Score', 40, 160);
+  g.fillStyle='#7bd389'; g.font='900 96px Montserrat, sans-serif'; g.fillText(String(score), 40, 242);
+  g.fillStyle='#9fb3d4'; g.font='700 26px Montserrat, sans-serif'; g.fillText('Level', 40, 290);
+  g.fillStyle='#EDEFF2'; g.font='800 54px Montserrat, sans-serif'; g.fillText(String(level), 40, 340);
 
-    const at = handle || '@guest';
-    const AX = 40, AY = 370, AR = 56;
-    g.save(); g.beginPath(); g.arc(AX + AR, AY + AR, AR, 0, Math.PI*2); g.clip();
-    if (avatarImg){ g.drawImage(avatarImg, AX, AY, AR*2, AR*2); } else { g.fillStyle='#1b2436'; g.fillRect(AX, AY, AR*2, AR*2); g.fillStyle='#eaf2ff'; g.font='800 42px Montserrat, sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText((at.replace('@','').slice(0,2)||'DD').toUpperCase(), AX+AR, AY+AR); g.textAlign='start'; g.textBaseline='alphabetic'; }
-    g.restore();
-    g.fillStyle='#EDEFF2'; g.font='800 42px Montserrat, sans-serif'; g.fillText(at, AX + AR*2 + 20, AY + AR + 12);
-
-    g.strokeStyle='#7C4DFF'; g.lineWidth=6; rounded(g, 12, 12, W-24, H-24, 16); g.stroke();
-    g.fillStyle='#9fb3d4'; g.font='600 24px Montserrat, sans-serif'; g.fillText('sentient • dobby', W-290, H-26);
-
-    return c.toDataURL('image/png');
-    function rounded(gc,x,y,w,h,r){const rr=Math.min(r,w/2,h/2);gc.beginPath();gc.moveTo(x+rr,y);gc.arcTo(x+w,y,x+w,y+h,rr);gc.arcTo(x+w,y+h,x,y+h,rr);gc.arcTo(x,y+h,x,y,rr);gc.arcTo(x,y,x+w,y,rr);gc.closePath();}
+  // Kullanıcı avatarı & handle
+  const at = handle || '@guest';
+  const AX = 40, AY = 370, AR = 56;
+  g.save();
+  g.beginPath(); g.arc(AX + AR, AY + AR, AR, 0, Math.PI*2); g.clip();
+  if (avatarImg){
+    g.drawImage(avatarImg, AX, AY, AR*2, AR*2);
+  }else{
+    g.fillStyle='#1b2436'; g.fillRect(AX, AY, AR*2, AR*2);
+    g.fillStyle='#eaf2ff'; g.font='800 42px Montserrat, sans-serif';
+    g.textAlign='center'; g.textBaseline='middle';
+    g.fillText((at.replace('@','').slice(0,2)||'DD').toUpperCase(), AX+AR, AY+AR);
+    g.textAlign='start'; g.textBaseline='alphabetic';
   }
+  g.restore();
+  g.fillStyle='#EDEFF2'; g.font='800 42px Montserrat, sans-serif';
+  g.fillText(at, AX + AR*2 + 20, AY + AR + 12);
+
+  /* === MASCOT: sağ alt köşe === */
+  if (mascotImg && mascotImg.complete && mascotImg.naturalWidth){
+    const mh = 320;                                  // maskot yüksekliği
+    const ratio = mascotImg.naturalWidth / mascotImg.naturalHeight;
+    const mw = Math.round(mh * ratio);
+    const mx = W - mw - 28;                          // sağdan boşluk
+    const my = H - mh - 24;                          // alttan boşluk
+    g.save();
+    g.shadowColor='rgba(0,0,0,.35)'; g.shadowBlur=24;
+    g.globalAlpha = 0.98;
+    g.drawImage(mascotImg, mx, my, mw, mh);
+    g.restore();
+  } else {
+    // yedek: hafif bir placeholder kutu
+    g.fillStyle='rgba(124,77,255,.10)';
+    g.fillRect(W-240-28, H-280-24, 240, 280);
+  }
+
+  // Kenarlık & footer
+  g.strokeStyle='#7C4DFF'; g.lineWidth=6; rounded(g, 12, 12, W-24, H-24, 16); g.stroke();
+  g.fillStyle='#9fb3d4'; g.font='600 24px Montserrat, sans-serif'; g.fillText('sentient • dobby', W-290, H-26);
+
+  return c.toDataURL('image/png');
+
+  function rounded(gc,x,y,w,h,r){
+    const rr=Math.min(r,w/2,h/2);
+    gc.beginPath();
+    gc.moveTo(x+rr,y); gc.arcTo(x+w,y,x+w,y+h,rr);
+    gc.arcTo(x+w,y+h,x,y+h,rr); gc.arcTo(x,y+h,x,y,rr);
+    gc.arcTo(x,y,x+w,y,rr); gc.closePath();
+  }
+}
+
 
   /* ====== Leaderboard API ====== */
   const lb = document.getElementById('lb-list'); const lbMeta = document.getElementById('lb-meta'); const lbLoading = document.getElementById('lb-loading');
@@ -702,7 +751,7 @@ for (let bi = bullets.length - 1; bi >= 0; bi--) {
     document.documentElement.style.setProperty('--hud-left-pad', pad + 'px');
   }
 
-  // Sekme gizlenirse duraklat
+  // Pause when tab hidden
   document.addEventListener('visibilitychange', ()=>{ if (document.hidden && running){ running=false; } });
 
   /* INIT */
