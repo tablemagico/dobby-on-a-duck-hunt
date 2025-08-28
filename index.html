@@ -204,7 +204,14 @@ mascotImg.src = MASCOT_IMG_SRC;
 const DUCK_SIZE_K = 0.38;
 
 /* Mobile/desktop detection (treat narrow screens as mobile) */
+    /* Mobile/desktop detection (treat narrow screens as mobile) */
 const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 520;
+
+// Boyut ölçekleri (sadece mobile'da küçült)
+const PLAYER_SCALE        = isMobile ? 0.80 : 1;   // oyuncu %80
+const BULLET_SCALE        = isMobile ? 0.80 : 1;   // oyuncu mermisi %80
+const ENEMY_BULLET_SCALE  = isMobile ? 0.85 : 1;   // (istersen) düşman mermisi %85
+
 
   function setAppHeight(){
     const vh = (window.visualViewport?.height ?? window.innerHeight);
@@ -308,8 +315,12 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
     o.start(t); o.stop(t+ms/1000+0.05);
   }
 
-  const player = { w:110, h:103, x:0, y:0, speed:460, shootCd:0, shootEvery:0.16, lives:3, inv:0 };
-  const bullets = [];
+const BASE_PLAYER_W = 110, BASE_PLAYER_H = 103;
+const player = {
+  w: Math.round(BASE_PLAYER_W * PLAYER_SCALE),
+  h: Math.round(BASE_PLAYER_H * PLAYER_SCALE),
+  x:0, y:0, speed:460, shootCd:0, shootEvery:0.16, lives:3, inv:0
+};  const bullets = [];
   const ducks = [];
   let duckDir = 1;
   let duckSpeed = 52;
@@ -433,7 +444,8 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
     // BULLET: from exact middle of sprite
     player.shootCd -= dt;
     if (keys.shoot && player.shootCd<=0){
-      const bw=8, bh=18;
+      const bw = Math.round(8  * BULLET_SCALE);
+const bh = Math.round(18 * BULLET_SCALE);
       const muzzleX = player.x + player.w/2 - bw/2;
       const muzzleY = player.y - bh;
       bullets.push({x:muzzleX, y:muzzleY, w:bw, h:bh, vy:-760, from:'p'});
@@ -457,8 +469,15 @@ const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth 
         for (let s=0;s<shots;s++){
           const shooter = alive[Math.floor(Math.random()*alive.length)];
           const spread = (Math.random()*40 - 20);
-          bullets.push({ x: shooter.x + shooter.w/2 - 3, y: shooter.y + shooter.h, w: 6, h: 14, vy: enemyBulletBase + Math.random()*160, from:'e', vx: spread * 0.3 });
-          beep(260,90,'sawtooth');
+bullets.push({
+  x: shooter.x + shooter.w/2 - Math.round(3 * ENEMY_BULLET_SCALE),
+  y: shooter.y + shooter.h,
+  w: Math.round(6  * ENEMY_BULLET_SCALE),
+  h: Math.round(14 * ENEMY_BULLET_SCALE),
+  vy: enemyBulletBase + Math.random()*160,
+  from:'e',
+  vx: spread * 0.3
+});          beep(260,90,'sawtooth');
         }
       }
       enemyShootTimer = enemyShootEvery;
