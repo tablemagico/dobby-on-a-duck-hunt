@@ -248,12 +248,33 @@ const ENEMY_BULLET_SCALE  = isMobile ? 0.50 : 1;   // (istersen) düşman mermis
 
   const zone = {x:0,y:0,w:0,h:0};
   function layout(){
-    const pad = Math.max(14, Math.min(W,H)*0.02);
-    zone.x = pad;
-    zone.w = W - pad*2;
-    zone.h = Math.max(160, Math.min(280, H*0.28));
-    zone.y = H - pad - zone.h - parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')||'0');
-  }
+  const pad = Math.max(14, Math.min(W, H) * 0.02);
+
+  // CSS değişkeninden safe-bottom'ı çek
+  const safeBottom = parseInt(
+    getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom') || '0',
+    10
+  );
+
+  // Touch kontroller yüksekliği (sadece görünüyorsa ekle)
+  const controls = document.getElementById('touchControls');
+  const controlsVisible = !!controls && getComputedStyle(controls).display !== 'none';
+  const controlsH = controlsVisible ? controls.getBoundingClientRect().height : 0;
+
+  // Butonların üstüne binmemek için ekstra boşluk
+  const extraBottom = controlsVisible ? (controlsH + 12) : 0;
+
+  zone.x = pad;
+  zone.w = W - pad * 2;
+  zone.h = Math.max(160, Math.min(280, H * 0.28));
+
+  // ALT SATIR: safe-bottom + touchControls yüksekliği kadar yukarı taşı
+  zone.y = Math.max(
+    26,                                  // ekranda çok yukarı kaçmasın
+    H - pad - zone.h - safeBottom - extraBottom
+  );
+}
+
 
   const keys = { left:false, right:false, shoot:false };
   addEventListener('keydown', e=>{
@@ -773,10 +794,15 @@ bullets.push({
   // Pause when tab hidden
   document.addEventListener('visibilitychange', ()=>{ if (document.hidden && running){ running=false; } });
 
-  /* INIT */
-  resize();
-  document.getElementById('userBox').style.display='none';
-  window.addEventListener('load', syncHudPad);
+ /* INIT */
+resize();
+document.getElementById('userBox').style.display='none';
+
+// İlk paint sonrası gerçek ölçülerle tekrar hesapla
+window.addEventListener('load', () => {
+  resize();       // safe-area + touchControls yüksekliği otursun
+  syncHudPad();   // avatar genişliğine göre HUD padding’i güncelle
+});
   </script>
 </body>
 </html>
