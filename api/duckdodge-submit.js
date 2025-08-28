@@ -14,13 +14,14 @@ function getRedis() {
   return client;
 }
 
-// >>> FARKLI NAMESPACE <<<  (çakışma olmasın)
+// Duck Dodge namespace (leaderboard ile AYNI olmalı)
 const NS = process.env.SENTIENT_DUCK_NS || 'sentient:duckdodge';
-const BOARD_KEY = `${NS}:board`;                // ZSET
-const DETAIL_KEY = (h) => `${NS}:detail:${h}`;  // HASH
+const BOARD_KEY = `${NS}:board`;                // ZSET (rank score)
+const DETAIL_KEY = (h) => `${NS}:detail:${h}`;  // HASH (score, timeMs, updatedAt)
 
-// rank puanı: skor büyük, eşitlikte süre küçük önde
-const composite = (score, timeMs) => (Math.floor(score) * 1_000_000_000) - Math.floor(timeMs);
+// Büyük score öne; eşitlikte timeMs küçük öne
+const composite = (score, timeMs) =>
+  (Math.floor(score) * 1_000_000_000) - Math.floor(timeMs);
 
 function readJson(req) {
   return new Promise((resolve, reject) => {
@@ -41,6 +42,7 @@ function normHandle(h) {
 }
 
 module.exports = async (req, res) => {
+  // <- POST olmalı (şu an sende GET kontrolü var ve 405 atıyor)
   if (req.method !== 'POST') { res.statusCode = 405; res.end('Method Not Allowed'); return; }
 
   try {
